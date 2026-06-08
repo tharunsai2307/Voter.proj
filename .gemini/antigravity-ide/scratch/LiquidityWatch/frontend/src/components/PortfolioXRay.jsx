@@ -17,7 +17,7 @@ export default function PortfolioXRay({
   onCancelPendingOrder,
   beginnerMode,
   onRequestExplain,
-  onAddFunds
+  onOpenAddFunds
 }) {
   const [activeExplain, setActiveExplain] = useState(null);
   const [chartSymbol, setChartSymbol] = useState(null); // selected full-screen chart
@@ -106,14 +106,10 @@ export default function PortfolioXRay({
           <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Available Cash</span>
           <span className="text-xl font-mono font-bold text-emerald-400">${paperCash.toFixed(2)}</span>
           <button 
-            onClick={() => {
-              const amount = window.prompt("Enter amount to add:", "10000");
-              const parsed = parseFloat(amount);
-              if (!isNaN(parsed) && parsed > 0) onAddFunds(parsed);
-            }}
-            className="absolute top-2 right-2 bg-emerald-900/30 text-emerald-400 px-2 py-0.5 rounded text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onOpenAddFunds}
+            className="absolute top-2 right-2 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-400 px-2 py-1 rounded text-[9px] font-bold transition-all shadow shadow-emerald-950/50 cursor-pointer"
           >
-            + Add
+            + Add Cash
           </button>
         </div>
         <div className="glass-panel-sharp p-4 flex flex-col justify-center">

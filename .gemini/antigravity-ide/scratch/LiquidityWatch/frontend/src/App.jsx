@@ -131,6 +131,7 @@ export default function App() {
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [alertAnalysis, setAlertAnalysis] = useState(null);
   const [alertAnalysisLoading, setAlertAnalysisLoading] = useState(null);
+  const [addFundsOpen, setAddFundsOpen] = useState(false);
 
   // Connection & Feed states
   const [connected, setConnected] = useState(false);
@@ -1566,7 +1567,7 @@ export default function App() {
                 max={replayProgress.total - 1}
                 value={replayProgress.currentIndex}
                 onChange={(e) => handleSeek(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-slate-950 border border-slate-850 rounded-lg appearance-none cursor-pointer accent-blue-650"
+                className="w-full h-1.5 bg-slate-950 border border-slate-850 rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
             </div>
 
@@ -1596,7 +1597,7 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="flex items-center space-x-1.5 bg-slate-950 border border-slate-905 rounded p-1">
+              <div className="flex items-center space-x-1.5 bg-slate-950 border border-slate-900 rounded p-1">
                 {[1, 2, 10, 100].map((spd) => (
                   <button
                     key={spd}
@@ -1614,7 +1615,7 @@ export default function App() {
         {replayMetrics && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-[#0d0f14] border border-[#1e293b] rounded-xl p-5 shadow-lg space-y-4">
-              <h3 className="text-sm font-bold text-slate-350 border-b border-slate-905 pb-2">Active Candle Metrics</h3>
+              <h3 className="text-sm font-bold text-slate-300 border-b border-slate-900 pb-2">Active Candle Metrics</h3>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-[#12151e] border border-slate-900 p-3 rounded">
@@ -1650,7 +1651,7 @@ export default function App() {
             </div>
 
             <div className="bg-[#0d0f14] border border-[#1e293b] rounded-xl p-5 shadow-lg space-y-4">
-              <h3 className="text-sm font-bold text-slate-350 border-b border-slate-905 pb-2">Replay Stats Averages</h3>
+              <h3 className="text-sm font-bold text-slate-300 border-b border-slate-900 pb-2">Replay Stats Averages</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-1.5 border-b border-slate-900/60">
                   <span className="text-slate-500">Average Price:</span>
@@ -1707,9 +1708,9 @@ export default function App() {
             {/* Live Clocks header section */}
             {cardVisibility.marketClocks && (
               <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono text-slate-500">
-                <span>NYSE/NASDAQ: <strong className="text-slate-350">{clocks.nyse || "Loading..."}</strong></span>
+                <span>NYSE/NASDAQ: <strong className="text-slate-300">{clocks.nyse || "Loading..."}</strong></span>
                 <span>CRYPTO: <strong className="text-indigo-400">{clocks.crypto || "Loading..."}</strong></span>
-                <span>LOCAL: <strong className="text-slate-350">{clocks.local}</strong></span>
+                <span>LOCAL: <strong className="text-slate-300">{clocks.local}</strong></span>
               </div>
             )}
           </div>
@@ -1725,7 +1726,7 @@ export default function App() {
               { id: 'strategy', icon: <Code className="w-3.5 h-3.5" />, label: 'Strategy Lab', professionalOnly: true },
               { id: 'latency', icon: <Cpu className="w-3.5 h-3.5" />, label: 'Latency Lab', professionalOnly: true },
               { id: 'orderbook', icon: <Layers className="w-3.5 h-3.5" />, label: 'Bid-Ask Liquidity', professionalOnly: true }
-            ].filter(tab => !beginnerMode || !tab.professionalOnly).map(tab => (
+            ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -1745,7 +1746,7 @@ export default function App() {
                 <button
                   key={wsNum}
                   onClick={() => setActiveWorkspace(wsNum)}
-                  className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${activeWorkspace === wsNum ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-350'}`}
+                  className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${activeWorkspace === wsNum ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
                   title={`Switch to Workspace ${wsNum}`}
                 >
                   WS {wsNum}
@@ -1772,10 +1773,24 @@ export default function App() {
               <span>{beginnerMode ? 'Beginner' : 'Pro'}</span>
             </button>
 
+            {/* Global Virtual Cash Balance Indicator */}
+            <div className="flex items-center space-x-2 bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1.5 text-[10px] font-bold">
+              <Coins className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-slate-500 uppercase">Cash:</span>
+              <span className="text-emerald-400 font-mono">${paperCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <button 
+                onClick={() => setAddFundsOpen(true)}
+                className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded transition-colors ml-1"
+                title="Add Virtual Money"
+              >
+                + Add
+              </button>
+            </div>
+
             {/* Ctrl+K Command Palette Trigger Button */}
             <button
               onClick={() => setCommandPaletteOpen(true)}
-              className="bg-slate-950 hover:bg-slate-900 border border-slate-850 text-slate-500 px-2.5 py-1.5 rounded font-mono text-[10px]"
+              className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-500 px-2.5 py-1.5 rounded font-mono text-[10px]"
               title="Open Command Palette (Ctrl+K)"
             >
               ⌘K
@@ -1784,7 +1799,7 @@ export default function App() {
             {/* Theme Toggle */}
             <button
               onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-              className="p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-450 hover:text-slate-200"
+              className="p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200"
               title={`Toggle ${theme === 'dark' ? 'Light' : 'Dark'} Theme`}
             >
               {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -1793,16 +1808,16 @@ export default function App() {
             {/* Audio Toggle */}
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-450 hover:text-slate-200"
+              className="p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-455 hover:text-slate-200"
               title={`${soundEnabled ? 'Disable' : 'Enable'} Alert Sound`}
             >
-              {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-450" /> : <VolumeX className="w-3.5 h-3.5 text-rose-500" />}
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-400" /> : <VolumeX className="w-3.5 h-3.5 text-rose-500" />}
             </button>
 
             {/* Fullscreen Toggle */}
             <button
               onClick={() => setFullscreen(true)}
-              className="p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-455 hover:text-slate-200"
+              className="p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200"
               title="Enter Fullscreen Trading Mode"
             >
               <Maximize2 className="w-3.5 h-3.5" />
@@ -2075,7 +2090,7 @@ export default function App() {
                             <span className="font-mono text-slate-400">{formatVal(m.lastPrice, 2, " $")}</span>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleRemoveSymbol(sym, 'stock'); }}
-                              className="text-rose-500 hover:text-rose-455 animate-pulse"
+                              className="text-rose-500 hover:text-rose-400 animate-pulse"
                             >
                               ✕
                             </button>
@@ -2112,7 +2127,7 @@ export default function App() {
                             <span className="font-mono text-slate-400">{formatVal(m.lastPrice, 2, " $")}</span>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleRemoveSymbol(sym, 'crypto'); }}
-                              className="text-rose-500 hover:text-rose-455 animate-pulse"
+                              className="text-rose-500 hover:text-rose-400 animate-pulse"
                             >
                               ✕
                             </button>
@@ -2137,28 +2152,28 @@ export default function App() {
                   {/* Metric highlights */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="bg-[#12151e] border border-[#1e293b]/40 p-3 rounded">
-                      <span className="text-slate-550 block mb-1 text-[10px] uppercase font-bold">Last Price</span>
+                      <span className="text-slate-500 block mb-1 text-[10px] uppercase font-bold">Last Price</span>
                       <span className="text-base font-bold text-slate-200">{formatVal(selectedMetric.lastPrice, 2, " $")}</span>
                       <span className={`text-[9px] font-bold block mt-1 ${selectedMetric.dailyChangePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {selectedMetric.dailyChangePercent >= 0 ? '▲' : '▼'} {formatVal(selectedMetric.dailyChangePercent, 2)}%
                       </span>
                     </div>
                     <div className="bg-[#12151e] border border-[#1e293b]/40 p-3 rounded">
-                      <span className="text-slate-550 block mb-1 text-[10px] uppercase font-bold">Liquidity Score</span>
+                      <span className="text-slate-500 block mb-1 text-[10px] uppercase font-bold">Liquidity Score</span>
                       <span className={`text-base font-bold block ${
                         selectedMetric.liquidityScore >= 75 ? 'text-emerald-400' : 
                         (selectedMetric.liquidityScore >= 45 ? 'text-amber-400' : 'text-rose-400')
                       }`}>{formatVal(selectedMetric.liquidityScore, 0)} ({selectedMetric.liquidityRating})</span>
                     </div>
                     <div className="bg-[#12151e] border border-[#1e293b]/40 p-3 rounded">
-                      <span className="text-slate-550 block mb-1 text-[10px] uppercase font-bold">Volatility</span>
+                      <span className="text-slate-500 block mb-1 text-[10px] uppercase font-bold">Volatility</span>
                       <span className={`text-base font-bold block ${
                         selectedMetric.volatilityLevel === 'HIGH' ? 'text-rose-400' : 
                         (selectedMetric.volatilityLevel === 'MEDIUM' ? 'text-amber-400' : 'text-slate-400')
                       }`}>{selectedMetric.volatilityLevel}</span>
                     </div>
                     <div className="bg-[#12151e] border border-[#1e293b]/40 p-3 rounded">
-                      <span className="text-slate-550 block mb-1 text-[10px] uppercase font-bold">Overall Risk</span>
+                      <span className="text-slate-500 block mb-1 text-[10px] uppercase font-bold">Overall Risk</span>
                       <span className={`text-base font-bold block ${
                         selectedMetric.overallRiskScore >= 70 ? 'text-rose-400 animate-pulse' : 
                         (selectedMetric.overallRiskScore >= 40 ? 'text-amber-400' : 'text-emerald-400')
@@ -2193,8 +2208,8 @@ export default function App() {
                           <span className="font-bold text-slate-300">{Math.round(selectedMetric.volume || 0).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-500">Institutional:</span>
-                          <span className={`font-bold ${selectedMetric.institutionalAlert !== 'NONE' ? 'text-rose-455 animate-pulse' : 'text-slate-500'}`}>
+                          <span className="text-slate-550">Institutional:</span>
+                          <span className={`font-bold ${selectedMetric.institutionalAlert !== 'NONE' ? 'text-rose-500 animate-pulse' : 'text-slate-500'}`}>
                             {selectedMetric.institutionalAlert}
                           </span>
                         </div>
@@ -2215,14 +2230,14 @@ export default function App() {
                         value={symbolNotes[selectedSymbol] || ""}
                         onChange={(e) => handleSaveNote(selectedSymbol, e.target.value)}
                         placeholder={`Write analysis, alerts, or notes for ${selectedSymbol}...`}
-                        className="w-full bg-slate-950 border border-slate-900 rounded p-2 text-xs text-slate-300 focus:border-blue-550 outline-none h-20 resize-none font-sans"
+                        className="w-full bg-slate-950 border border-slate-900 rounded p-2 text-xs text-slate-300 focus:border-blue-500 outline-none h-20 resize-none font-sans"
                       />
                     </div>
 
                     {/* Rule-Based AI Summary statement */}
                     <div className="bg-slate-950/40 border border-[#1e293b]/40 rounded p-4 space-y-2 flex flex-col justify-between">
                       <div>
-                        <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Local Intelligence Statement</span>
+                        <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Local Intelligence statement</span>
                         <div className="text-[11px] text-slate-400 leading-relaxed italic">
                           {generateImprovedAISummary()}
                         </div>
@@ -2234,7 +2249,7 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-20 text-slate-650 italic text-xs">
+                <div className="text-center py-20 text-slate-600 italic text-xs">
                   Select a symbol from the watchlist to inspect real-time metrics...
                 </div>
               )}
@@ -2284,7 +2299,7 @@ export default function App() {
             stocks={stocks}
             cryptos={cryptos}
             beginnerMode={beginnerMode}
-            onAddFunds={addVirtualFunds}
+            onOpenAddFunds={() => setAddFundsOpen(true)}
             onPlaceMarketOrder={placeMarketOrder}
             onPlacePendingOrder={placePendingOrder}
             onCancelPendingOrder={cancelPendingOrder}
@@ -2308,13 +2323,13 @@ export default function App() {
         </main>
       )}
 
-      {activeTab === "scanner" && !beginnerMode && (
+      {activeTab === "scanner" && (
         <main className="flex-1 p-6 space-y-6 max-w-[1600px] mx-auto w-full">
           <OpportunityScanner metricsMap={metricsMap} />
         </main>
       )}
 
-      {activeTab === "strategy" && !beginnerMode && (
+      {activeTab === "strategy" && (
         <main className="flex-1 p-6 space-y-6 max-w-[1600px] mx-auto w-full">
           <StrategyLab 
             paperHistory={paperHistory}
@@ -2346,13 +2361,13 @@ export default function App() {
         </main>
       )}
 
-      {activeTab === "latency" && !beginnerMode && (
+      {activeTab === "latency" && (
         <main className="flex-1 p-6 space-y-6 max-w-[1600px] mx-auto w-full">
           <LatencyLab />
         </main>
       )}
 
-      {activeTab === "orderbook" && !beginnerMode && (
+      {activeTab === "orderbook" && (
         <main className="flex-1 p-6 space-y-6 max-w-[1600px] mx-auto w-full">
           <BidAskLiquidity metricsMap={metricsMap} stocks={stocks} cryptos={cryptos} />
         </main>
@@ -2378,6 +2393,109 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Virtual Funding Desk Modal */}
+      <AnimatePresence>
+        {addFundsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="bg-[#0d0f14] border border-[#1e293b] rounded-xl p-6 max-w-md w-full shadow-2xl glass-panel relative overflow-hidden font-sans"
+            >
+              <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500 animate-pulse" />
+              
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center space-x-2">
+                <Coins className="text-emerald-400 w-5 h-5" />
+                <span>Virtual Funding Desk</span>
+              </h3>
+
+              <div className="space-y-4 text-xs">
+                {/* Balance display */}
+                <div className="bg-[#0a0d12] border border-[#1e293b] p-4 rounded-lg flex justify-between items-center">
+                  <span className="text-slate-400 uppercase font-bold text-[10px]">Current Cash Balance</span>
+                  <span className="text-lg font-mono font-bold text-emerald-400">
+                    ${paperCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {/* Quick Add Presets */}
+                <div className="space-y-2">
+                  <span className="text-slate-500 font-bold uppercase text-[9px] block">Quick Injection Presets</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: '+$10k', value: 10000 },
+                      { label: '+$50k', value: 50000 },
+                      { label: '+$100k', value: 100000 },
+                      { label: '+$500k', value: 500000 }
+                    ].map(preset => (
+                      <button
+                        type="button"
+                        key={preset.value}
+                        onClick={() => addVirtualFunds(preset.value)}
+                        className="bg-slate-900 hover:bg-[#161b22] border border-slate-880 hover:border-emerald-500/30 text-slate-300 hover:text-emerald-400 py-2 rounded font-bold font-mono transition-all text-xs"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Amount Form */}
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const amountInput = e.target.elements.customAmount;
+                    const parsed = parseFloat(amountInput.value);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      addVirtualFunds(parsed);
+                      amountInput.value = "";
+                      setAddFundsOpen(false);
+                    } else {
+                      alert("Please enter a valid positive number.");
+                    }
+                  }}
+                  className="space-y-3 pt-2"
+                >
+                  <div className="space-y-1">
+                    <label className="text-slate-500 font-bold uppercase text-[9px] block">Or Enter Custom Amount</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono font-bold">$</span>
+                      <input
+                        name="customAmount"
+                        type="number"
+                        min="1"
+                        step="any"
+                        placeholder="e.g. 25000"
+                        className="w-full bg-slate-950 border border-slate-800 rounded pl-7 pr-3 py-2 text-slate-100 placeholder-slate-600 outline-none focus:border-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAddFundsOpen(false)}
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 py-2 rounded font-semibold transition-colors animate-fadeIn"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded font-semibold transition-colors shadow-lg shadow-emerald-900/20"
+                    >
+                      Confirm Injection
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Footer (Hidden in Fullscreen) */}
       {!fullscreen && (
@@ -2423,7 +2541,7 @@ export default function App() {
                   <div className={`max-w-[85%] rounded-lg p-2.5 leading-relaxed ${
                     msg.sender === 'user' 
                       ? 'bg-blue-600/20 border border-blue-500/30 text-blue-200' 
-                      : 'bg-slate-900 border border-slate-800 text-slate-355'
+                      : 'bg-slate-900 border border-slate-800 text-slate-300'
                   }`}>
                     {msg.text}
                   </div>
@@ -2448,7 +2566,7 @@ export default function App() {
                 setChatHistory(prev => [...prev, { sender: 'user', text: userText }]);
                 setChatLoading(true);
                 try {
-                  const res = await fetch("http://localhost:9001/api/chat", {
+                  const res = await fetch("http://localhost:9005/api/chat", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -2475,7 +2593,7 @@ export default function App() {
                 placeholder="Ask e.g. Why is NVDA volatile?"
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
-                className="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-100 placeholder-slate-650 outline-none focus:border-blue-550"
+                className="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-100 placeholder-slate-600 outline-none focus:border-blue-500"
               />
               <button 
                 type="submit"
@@ -2539,7 +2657,7 @@ export default function App() {
                 <button
                   key={idx}
                   onClick={item.action}
-                  className="w-full text-left px-3 py-2 rounded hover:bg-[#181d2a] text-slate-350 font-medium transition-colors flex justify-between items-center"
+                  className="w-full text-left px-3 py-2 rounded hover:bg-[#181d2a] text-slate-300 font-medium transition-colors flex justify-between items-center"
                 >
                   <span>{item.label}</span>
                   <span className="text-[10px] text-slate-600 font-bold">↵</span>
