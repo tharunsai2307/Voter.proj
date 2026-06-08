@@ -1,0 +1,27 @@
+# Ignore everything in the home directory by default
+*
+
+# Allow the .gitignore file itself
+!.gitignore
+
+# Allow scratch directory and the two projects
+!/.gemini/
+!/.gemini/antigravity-ide/
+!/.gemini/antigravity-ide/scratch/
+
+!/.gemini/antigravity-ide/scratch/LiquiditySim/
+!/.gemini/antigravity-ide/scratch/LiquiditySim/**
+
+!/.gemini/antigravity-ide/scratch/LiquidityWatch/
+!/.gemini/antigravity-ide/scratch/LiquidityWatch/**
+
+# Ignore build artifacts, package managers, and environments inside allowed folders
+**/node_modules/
+**/build/
+**/*.obj
+**/*.exe
+**/*.ilk
+**/*.pdb
+**/.env
+**/.env.local
+**/.DS_Store
