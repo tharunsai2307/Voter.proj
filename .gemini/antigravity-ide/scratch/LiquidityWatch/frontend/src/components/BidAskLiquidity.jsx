@@ -1,19 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, Search, BarChart2, ShieldAlert, Cpu, List, FileText } from 'lucide-react';
+import { Layers, Search, BarChart2, ShieldAlert, Cpu, List, FileText, Trash2 } from 'lucide-react';
 
 export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
   const [selectedAsset, setSelectedAsset] = useState('AAPL');
   const [depthLevel, setDepthLevel] = useState(3); // 1 = L1, 2 = L2, 3 = L3
   const [orderFeed, setOrderFeed] = useState([]); // for Level 3 real-time order match log
+  const [customOrders, setCustomOrders] = useState([]); // { id, orderId, price, size, side, asset, time }
+
+  const [orderSide, setOrderSide] = useState('BID');
+  const [orderPrice, setOrderPrice] = useState('');
+  const [orderSize, setOrderSize] = useState('100');
 
   const metric = metricsMap[selectedAsset];
 
   const hasData = metric && metric.bidPrice && metric.askPrice;
-  const hasSizes = hasData && metric.bidSize > 0 && metric.askSize > 0;
+  
+  const activeCustomOrders = customOrders.filter(o => o.asset === selectedAsset);
+  const customBids = activeCustomOrders.filter(o => o.side === 'BID');
+  const customAsks = activeCustomOrders.filter(o => o.side === 'ASK');
+
+  // Override L1 Best Bid and Ask if custom orders are placed inside/at the spread
+  const maxCustomBid = customBids.length > 0 ? Math.max(...customBids.map(o => o.price)) : 0;
+  const minCustomAsk = customAsks.length > 0 ? Math.min(...customAsks.map(o => o.price)) : Infinity;
+
+  const displayBidPrice = (hasData && maxCustomBid > 0) ? Math.max(metric.bidPrice, maxCustomBid) : (metric?.bidPrice || null);
+  const displayAskPrice = (hasData && minCustomAsk !== Infinity) ? Math.min(metric.askPrice, minCustomAsk) : (metric?.askPrice || null);
+
+  const displayBidSize = (hasData && metric.bidPrice === displayBidPrice) 
+    ? metric.bidSize + customBids.filter(o => o.price === displayBidPrice).reduce((sum, o) => sum + o.size, 0)
+    : (customBids.filter(o => o.price === displayBidPrice).reduce((sum, o) => sum + o.size, 0) || (metric?.bidSize || 0));
+
+  const displayAskSize = (hasData && metric.askPrice === displayAskPrice)
+    ? metric.askSize + customAsks.filter(o => o.price === displayAskPrice).reduce((sum, o) => sum + o.size, 0)
+    : (customAsks.filter(o => o.price === displayAskPrice).reduce((sum, o) => sum + o.size, 0) || (metric?.askSize || 0));
+
+  const hasSizes = hasData && displayBidSize > 0 && displayAskSize > 0;
 
   const imbalance = hasSizes 
-    ? (metric.bidSize / (metric.bidSize + metric.askSize)) * 100 
+    ? (displayBidSize / (displayBidSize + displayAskSize)) * 100 
     : 50;
 
   // Helper to get tick size based on asset type
@@ -51,6 +76,48 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
     return { bids, asks };
   };
 
+  // Merge custom orders into L2 levels
+  const mergeCustomOrdersIntoL2 = (standardL2, customOrdersList, isBid, symbol) => {
+    const tickSize = getTickSize(symbol);
+    const mergedMap = {};
+
+    standardL2.forEach(lvl => {
+      const key = lvl.price.toFixed(4);
+      mergedMap[key] = { price: lvl.price, size: lvl.size, fromFeed: true };
+    });
+
+    customOrdersList.forEach(co => {
+      const key = co.price.toFixed(4);
+      if (mergedMap[key]) {
+        mergedMap[key].size += co.size;
+      } else {
+        mergedMap[key] = { price: co.price, size: co.size, fromFeed: false };
+      }
+    });
+
+    const mergedList = Object.values(mergedMap);
+
+    if (isBid) {
+      mergedList.sort((a, b) => b.price - a.price);
+    } else {
+      mergedList.sort((a, b) => a.price - b.price);
+    }
+
+    const result = mergedList.slice(0, 5);
+
+    let cumulative = 0;
+    return result.map((item, idx) => {
+      cumulative += item.size;
+      return {
+        level: idx + 1,
+        price: item.price,
+        size: item.size,
+        cumulative,
+        fromFeed: item.fromFeed
+      };
+    });
+  };
+
   // Generate Level 3 Individual Orders
   const generateLevel3 = (bids, asks) => {
     const individualBids = [];
@@ -58,39 +125,69 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
 
     // Split each level's volume into 3-4 individual orders
     bids.forEach((b, i) => {
+      const customAtPrice = customBids.filter(o => o.price.toFixed(4) === b.price.toFixed(4));
+      const customTotal = customAtPrice.reduce((sum, o) => sum + o.size, 0);
+      let standardSize = Math.max(0, b.size - customTotal);
+
       const orderCount = 3;
-      let remaining = b.size;
+      let remaining = standardSize;
       for (let j = 0; j < orderCount; j++) {
         const orderSeed = Math.cos(b.price * 2000 + i * 10 + j) * 0.5 + 0.5;
-        const size = j === orderCount - 1 ? remaining : Math.round((b.size / orderCount) * (0.6 + 0.8 * orderSeed));
+        const size = j === orderCount - 1 ? remaining : Math.round((standardSize / orderCount) * (0.6 + 0.8 * orderSeed));
         if (size <= 0) continue;
         remaining -= size;
         const orderId = Math.round(100000 + (b.price * 500 + j * 97) % 900000);
         const timeOffset = Math.round((orderSeed * 120) * 1000); // ms ago
         const timeStr = new Date(Date.now() - timeOffset).toLocaleTimeString([], { hour12: false });
-        individualBids.push({ orderId, price: b.price, size, time: timeStr, level: b.level });
+        individualBids.push({ orderId, price: b.price, size, time: timeStr, level: b.level, isUser: false });
       }
+
+      customAtPrice.forEach(co => {
+        individualBids.push({ 
+          orderId: co.orderId, 
+          price: co.price, 
+          size: co.size, 
+          time: co.time, 
+          level: b.level, 
+          isUser: true 
+        });
+      });
     });
 
     asks.forEach((a, i) => {
+      const customAtPrice = customAsks.filter(o => o.price.toFixed(4) === a.price.toFixed(4));
+      const customTotal = customAtPrice.reduce((sum, o) => sum + o.size, 0);
+      let standardSize = Math.max(0, a.size - customTotal);
+
       const orderCount = 3;
-      let remaining = a.size;
+      let remaining = standardSize;
       for (let j = 0; j < orderCount; j++) {
         const orderSeed = Math.sin(a.price * 2000 + i * 10 + j) * 0.5 + 0.5;
-        const size = j === orderCount - 1 ? remaining : Math.round((a.size / orderCount) * (0.6 + 0.8 * orderSeed));
+        const size = j === orderCount - 1 ? remaining : Math.round((standardSize / orderCount) * (0.6 + 0.8 * orderSeed));
         if (size <= 0) continue;
         remaining -= size;
         const orderId = Math.round(100000 + (a.price * 500 + j * 97) % 900000);
         const timeOffset = Math.round((orderSeed * 120) * 1000);
         const timeStr = new Date(Date.now() - timeOffset).toLocaleTimeString([], { hour12: false });
-        individualAsks.push({ orderId, price: a.price, size, time: timeStr, level: a.level });
+        individualAsks.push({ orderId, price: a.price, size, time: timeStr, level: a.level, isUser: false });
       }
+
+      customAtPrice.forEach(co => {
+        individualAsks.push({
+          orderId: co.orderId,
+          price: co.price,
+          size: co.size,
+          time: co.time,
+          level: a.level,
+          isUser: true
+        });
+      });
     });
 
     return { bids: individualBids, asks: individualAsks };
   };
 
-  const { bids: l2Bids, asks: l2Asks } = generateLevel2(
+  const { bids: standardL2Bids, asks: standardL2Asks } = generateLevel2(
     metric?.bidPrice, 
     metric?.bidSize || 100, 
     metric?.askPrice, 
@@ -98,7 +195,45 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
     selectedAsset
   );
 
+  const l2Bids = mergeCustomOrdersIntoL2(standardL2Bids, customBids, true, selectedAsset);
+  const l2Asks = mergeCustomOrdersIntoL2(standardL2Asks, customAsks, false, selectedAsset);
+
   const { bids: l3Bids, asks: l3Asks } = generateLevel3(l2Bids, l2Asks);
+
+  // Set default price when BBO side or asset changes
+  useEffect(() => {
+    if (hasData) {
+      setOrderPrice((orderSide === 'BID' ? displayBidPrice : displayAskPrice).toFixed(selectedAsset.startsWith('X:') ? 2 : 2));
+    }
+  }, [selectedAsset, orderSide]);
+
+  const handlePlaceDepthOrder = (e) => {
+    e.preventDefault();
+    const price = parseFloat(orderPrice);
+    const size = parseInt(orderSize);
+    if (isNaN(price) || price <= 0 || isNaN(size) || size <= 0) {
+      return alert("Please enter valid price and size.");
+    }
+
+    const orderId = Math.round(100000 + Math.random() * 900000);
+    const time = new Date().toLocaleTimeString([], { hour12: false });
+    const newOrder = {
+      id: Math.random().toString(),
+      orderId,
+      price,
+      size,
+      side: orderSide,
+      asset: selectedAsset,
+      time
+    };
+
+    setCustomOrders(prev => [...prev, newOrder]);
+    setOrderSize('100');
+  };
+
+  const handleCancelDepthOrder = (id) => {
+    setCustomOrders(prev => prev.filter(o => o.id !== id));
+  };
 
   // Save latest metrics in ref to avoid resetting interval on tick updates
   const metricRef = useRef(metric);
@@ -223,13 +358,13 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
                       <div className="text-left w-1/2">
                         <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Best Bid Size</div>
                         <div className="text-2xl font-mono text-slate-200">
-                          {hasSizes ? metric.bidSize.toLocaleString() : 'N/A'}
+                          {hasSizes ? displayBidSize.toLocaleString() : 'N/A'}
                         </div>
                       </div>
                       <div className="text-right w-1/2">
                         <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Best Bid Price</div>
                         <div className="text-3xl font-mono text-emerald-400 font-bold">
-                          ${hasData ? metric.bidPrice.toFixed(2) : '---'}
+                          ${hasData ? displayBidPrice.toFixed(2) : '---'}
                         </div>
                       </div>
                     </div>
@@ -238,13 +373,13 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
                       <div className="text-left w-1/2">
                         <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Best Ask Price</div>
                         <div className="text-3xl font-mono text-rose-400 font-bold">
-                          ${hasData ? metric.askPrice.toFixed(2) : '---'}
+                          ${hasData ? displayAskPrice.toFixed(2) : '---'}
                         </div>
                       </div>
                       <div className="text-right w-1/2">
                         <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Best Ask Size</div>
                         <div className="text-2xl font-mono text-slate-200">
-                          {hasSizes ? metric.askSize.toLocaleString() : 'N/A'}
+                          {hasSizes ? displayAskSize.toLocaleString() : 'N/A'}
                         </div>
                       </div>
                     </div>
@@ -347,7 +482,14 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
                           {l3Bids.map((b, idx) => (
                             <div key={`${b.orderId}-${b.price}-${idx}`} className="flex justify-between items-center py-1 px-1.5 hover:bg-slate-900 border-b border-slate-900/40">
                               <div>
-                                <span className="text-slate-400 text-[10px] font-bold">#{b.orderId}</span>
+                                <div className="flex items-center space-x-1">
+                                  <span className="text-slate-400 text-[10px] font-bold">#{b.orderId}</span>
+                                  {b.isUser && (
+                                    <span className="px-1 py-0.2 bg-purple-950 border border-purple-800 text-purple-300 text-[8px] font-bold uppercase rounded">
+                                      YOU
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="text-[9px] text-slate-600 block">{b.time}</span>
                               </div>
                               <span className="text-slate-200 font-medium">
@@ -371,7 +513,14 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
                                 <span className="text-rose-500 font-bold">${a.price.toFixed(2)}</span> @ {a.size.toLocaleString()}
                               </span>
                               <div className="text-right">
-                                <span className="text-slate-400 text-[10px] font-bold">#{a.orderId}</span>
+                                <div className="flex items-center justify-end space-x-1">
+                                  {a.isUser && (
+                                    <span className="px-1 py-0.2 bg-purple-950 border border-purple-800 text-purple-300 text-[8px] font-bold uppercase rounded">
+                                      YOU
+                                    </span>
+                                  )}
+                                  <span className="text-slate-400 text-[10px] font-bold">#{a.orderId}</span>
+                                </div>
                                 <span className="text-[9px] text-slate-600 block">{a.time}</span>
                               </div>
                             </div>
@@ -426,7 +575,100 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
 
           {/* Right Side: Imbalance and Metrics (Always visible) */}
           <div className="space-y-4 flex flex-col">
-            
+
+            {/* Depth Order Entry Card */}
+            <div className="glass-panel-sharp p-6 border-t-2 border-t-purple-600 flex flex-col">
+              <h3 className="text-xs font-bold text-slate-300 uppercase flex items-center space-x-2 mb-4">
+                <Layers className="w-4 h-4 text-purple-500" />
+                <span>Depth Order Entry</span>
+              </h3>
+              
+              <form onSubmit={handlePlaceDepthOrder} className="space-y-4">
+                {/* Side Selector Toggle */}
+                <div className="flex space-x-1 bg-[#0a0d12] border border-[#1e293b] p-0.5 rounded-sm">
+                  <button
+                    type="button"
+                    onClick={() => setOrderSide('BID')}
+                    className={`flex-1 py-1.5 rounded-sm text-[10px] font-bold uppercase transition-all ${orderSide === 'BID' ? 'bg-emerald-950/80 border border-emerald-800 text-emerald-400' : 'text-slate-500 hover:text-slate-350'}`}
+                  >
+                    Bid (Buy)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderSide('ASK')}
+                    className={`flex-1 py-1.5 rounded-sm text-[10px] font-bold uppercase transition-all ${orderSide === 'ASK' ? 'bg-rose-950/80 border border-rose-800 text-rose-450' : 'text-slate-500 hover:text-slate-350'}`}
+                  >
+                    Ask (Sell)
+                  </button>
+                </div>
+
+                {/* Price and Size inputs side-by-side */}
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1.5">
+                    <label className="text-slate-500 font-bold uppercase text-[9px]">Limit Price</label>
+                    <div className="relative flex items-center bg-[#0a0d12] border border-[#1e293b] rounded-sm px-2">
+                      <span className="text-slate-500 font-mono mr-1">$</span>
+                      <input
+                        type="number"
+                        step={getTickSize(selectedAsset)}
+                        min="0.01"
+                        value={orderPrice}
+                        onChange={(e) => setOrderPrice(e.target.value)}
+                        className="bg-transparent border-none text-slate-200 font-mono w-full focus:outline-none focus:ring-0 p-1"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-slate-500 font-bold uppercase text-[9px]">Quantity</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={orderSize}
+                      onChange={(e) => setOrderSize(e.target.value)}
+                      className="bg-[#0a0d12] border border-[#1e293b] rounded-sm text-slate-200 font-mono w-full focus:outline-none focus:ring-0 p-1 px-2"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Submit button */}
+                <button
+                  type="submit"
+                  className={`w-full py-2 rounded font-semibold uppercase text-xs transition-all ${orderSide === 'BID' ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/20' : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/20'}`}
+                >
+                  Place resting {orderSide === 'BID' ? 'Bid' : 'Ask'}
+                </button>
+              </form>
+
+              {/* Your Resting Orders Ledger (Only visible if there are active custom orders) */}
+              {activeCustomOrders.length > 0 && (
+                <div className="mt-6 border-t border-[#1e293b]/60 pt-4">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block mb-3">Your Active Resting Orders</span>
+                  <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                    {activeCustomOrders.map(order => (
+                      <div
+                        key={order.id}
+                        className="flex justify-between items-center bg-[#0a0d12] border border-[#1e293b]/40 rounded px-2.5 py-1.5 font-mono text-[10px]"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className={`w-1.5 h-1.5 rounded-full ${order.side === 'BID' ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+                          <span className="text-slate-300">{order.size} @ ${order.price.toFixed(2)}</span>
+                        </div>
+                        <button
+                          onClick={() => handleCancelDepthOrder(order.id)}
+                          className="text-slate-500 hover:text-rose-450 p-1 transition-colors"
+                          title="Cancel Order"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* L1 Imbalance Gauge */}
             <div className="glass-panel-sharp p-6 flex flex-col items-center justify-center text-center">
                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-4">Level 1 Imbalance Ratio</span>
