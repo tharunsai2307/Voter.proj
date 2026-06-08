@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, Search, BarChart2, ShieldAlert, Cpu, List, FileText, Trash2 } from 'lucide-react';
 
-export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
+export default function BidAskLiquidity({ metricsMap, stocks, cryptos, beginnerMode }) {
   const [selectedAsset, setSelectedAsset] = useState('AAPL');
   const [depthLevel, setDepthLevel] = useState(3); // 1 = L1, 2 = L2, 3 = L3
   const [orderFeed, setOrderFeed] = useState([]); // for Level 3 real-time order match log
@@ -389,6 +389,18 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
                         * Best Bid and Offer (BBO) represents the absolute highest buying price and lowest selling price currently available in the public quotes ledger.
                       </p>
                     </div>
+
+                    {beginnerMode && (
+                      <div className="mt-4 bg-blue-950/20 border border-blue-900/30 p-4 rounded-sm text-xs text-slate-350 space-y-2 text-left max-w-md w-full">
+                        <h4 className="font-bold text-blue-400 flex items-center space-x-1.5">
+                          <span>💡 Beginner Guide: What is L1 Market Spread?</span>
+                        </h4>
+                        <p className="leading-relaxed">
+                          In trading, the <strong>Bid</strong> is the highest price buyers want to pay, and the <strong>Ask</strong> is the lowest price sellers want to receive. 
+                          The difference between them is the <strong>Spread</strong>. A narrow spread means high liquidity, making it easier for you to buy or sell quickly!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -406,6 +418,16 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
                     <span className="text-[10px] text-slate-500 font-bold uppercase">Level 2 Depth Book (Aggregated price levels)</span>
                     <span className="text-[9px] bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">5 Depth Levels</span>
                   </div>
+
+                  {beginnerMode && (
+                    <div className="bg-blue-950/20 border-b border-blue-900/30 p-3 text-xs text-slate-300 text-left">
+                      <h4 className="font-bold text-blue-455 mb-1">📖 Understanding Level 2 (Order Book Depth)</h4>
+                      <p className="leading-relaxed text-[11px]">
+                        Level 2 displays cumulative order size at different price levels. The green bars represent buy orders (bids), while the red bars represent sell orders (asks). 
+                        This helps you see where big institutional orders are waiting to trigger.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex-1 grid grid-cols-2 divide-x divide-[#1e293b]/60 overflow-hidden font-mono">
                     {/* Bids Column */}
@@ -470,6 +492,16 @@ export default function BidAskLiquidity({ metricsMap, stocks, cryptos }) {
                       <span className="text-[10px] text-slate-500 font-bold uppercase">Resting Order Ledger (L3 Priority)</span>
                       <span className="text-[9px] bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Individual orders</span>
                     </div>
+
+                    {beginnerMode && (
+                      <div className="bg-blue-950/20 border-b border-blue-900/30 p-3 text-xs text-slate-300 text-left">
+                        <h4 className="font-bold text-blue-455 mb-1">📖 Understanding Level 3 (Individual Ledger)</h4>
+                        <p className="leading-relaxed text-[11px]">
+                          Level 3 shows the actual queue of individual orders before they are matched. Each order has a unique ID, size, and submission timestamp. 
+                          Your own custom orders will show up marked as <span className="text-purple-400 font-bold font-mono">YOU</span> in this list!
+                        </p>
+                      </div>
+                    )}
 
                     <div className="flex-1 grid grid-cols-2 divide-x divide-[#1e293b]/60 overflow-hidden font-mono text-[11px]">
                       {/* Bids Queue */}

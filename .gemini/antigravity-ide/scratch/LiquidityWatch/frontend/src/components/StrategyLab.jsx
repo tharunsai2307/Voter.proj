@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, TrendingUp, TrendingDown, Target, Save, FileText, Trash2, Tag } from 'lucide-react';
 
-export default function StrategyLab({ paperHistory, paperPositions }) {
+export default function StrategyLab({ paperHistory, paperPositions, beginnerMode }) {
   const [journalEntries, setJournalEntries] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [selectedAsset, setSelectedAsset] = useState('General');
@@ -62,6 +62,19 @@ export default function StrategyLab({ paperHistory, paperPositions }) {
           <p className="text-[10px] text-slate-500 uppercase">Backtesting, Strategy Tagging & Trade Execution Journal</p>
         </div>
       </div>
+
+      {beginnerMode && (
+        <div className="bg-blue-950/20 border border-blue-900/30 p-4 rounded-sm text-xs text-slate-350 space-y-2 text-left">
+          <h4 className="font-bold text-blue-400 flex items-center space-x-1.5">
+            <span>💡 Beginner Guide: Strategy Lab</span>
+          </h4>
+          <p className="leading-relaxed">
+            Welcome to the Strategy Lab! Here you can log and tag notes about your custom strategies (e.g., <strong>Mean Reversion</strong> or <strong>Momentum Breakouts</strong>) 
+            to analyze your historical trading performance. 
+            Understanding the math behind your execution helps you refine your edge over the market.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="glass-panel-sharp p-4 flex flex-col justify-center border-t-2 border-t-slate-700">

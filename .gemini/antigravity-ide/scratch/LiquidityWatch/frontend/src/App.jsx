@@ -58,6 +58,7 @@ import StrategyLab from './components/StrategyLab';
 import ReplayStudio from './components/ReplayStudio';
 import BidAskLiquidity from './components/BidAskLiquidity';
 import TradingJournalTab from './components/TradingJournalTab';
+import LoginScreen from './components/LoginScreen';
 
 const WEBSOCKET_URL = "ws://localhost:9005";
 
@@ -91,6 +92,36 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('liquiditywatch_beginner_mode', JSON.stringify(beginnerMode));
   }, [beginnerMode]);
+
+  // Session & Login State
+  const [user, setUser] = useState(() => localStorage.getItem('lw_user') || null);
+  const handleLogin = (username, startAsBeginner) => {
+    setUser(username);
+    localStorage.setItem('lw_user', username);
+    setBeginnerMode(startAsBeginner);
+  };
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('lw_user');
+  };
+
+  // Load persistent trades from backend
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const res = await fetch('http://localhost:9005/api/trades');
+        const data = await res.json();
+        if (data && Array.isArray(data.trades)) {
+          setPaperHistory(data.trades);
+        }
+      } catch (e) {
+        console.error("Failed to fetch persistent trades from backend:", e);
+      }
+    };
+    if (user) {
+      fetchTrades();
+    }
+  }, [user]);
 
   // ELI5 Explainer selection
   const [eli5Symbol, setEli5Symbol] = useState(null);
@@ -222,7 +253,13 @@ export default function App() {
         return { ...prev, [asset]: { shares: newShares, avgPrice: current.avgPrice } };
       });
     }
-    setPaperHistory(prev => [{ asset, qty, side, price, time: new Date().toLocaleTimeString(), type: side, note }, ...prev]);
+    const newTrade = { asset, qty, side, price, time: new Date().toLocaleTimeString(), type: side, note };
+    setPaperHistory(prev => [newTrade, ...prev]);
+    fetch('http://localhost:9005/api/trades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTrade)
+    }).catch(err => console.error("Failed to save trade to backend:", err));
   };
 
   // Evaluate pending orders inside ws.onmessage
@@ -296,9 +333,15 @@ export default function App() {
       });
     }
 
-    setPaperHistory(prev => [{
+    const newTrade = {
       type, asset: paperOrderAsset, qty: paperOrderQty, price, time: new Date().toLocaleTimeString()
-    }, ...prev].slice(0, 100));
+    };
+    setPaperHistory(prev => [newTrade, ...prev].slice(0, 100));
+    fetch('http://localhost:9005/api/trades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTrade)
+    }).catch(err => console.error("Failed to save trade to backend:", err));
   };
 
   // Workspace Configurations
@@ -1687,6 +1730,10 @@ export default function App() {
   // -------------------------------------------------------------
   // RENDERING MAIN APP
   // -------------------------------------------------------------
+  if (!user) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   return (
     <div className={`min-h-screen bg-[#06070a] text-[#d1d5db] flex flex-col font-sans select-none selection:bg-blue-600 selection:text-white pb-6`}>
       
@@ -1741,6 +1788,20 @@ export default function App() {
 
           {/* Quick Controls, Theme, Sound, Fullscreen, and Workspaces */}
           <div className="flex items-center space-x-3 text-xs w-full lg:w-auto justify-end flex-wrap gap-y-2">
+            {/* User Profile and Sign Out */}
+            {user && (
+              <div className="flex items-center space-x-2 bg-slate-950/80 border border-slate-800 rounded px-2.5 py-1.5 text-[10px]">
+                <User className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-slate-300 font-bold font-mono">{user}</span>
+                <button 
+                  onClick={handleLogout}
+                  className="bg-rose-950/40 hover:bg-rose-950/80 border border-rose-900/50 text-rose-450 px-1.5 py-0.5 rounded transition-all font-semibold ml-1 cursor-pointer"
+                  title="Sign Out"
+                >
+                  Exit
+                </button>
+              </div>
+            )}
             {/* Workspace Selector */}
             <div className="flex items-center space-x-1 bg-slate-950 border border-slate-900 rounded p-0.5">
               {[1, 2, 3].map(wsNum => (
@@ -2268,6 +2329,7 @@ export default function App() {
             metricsMap={metricsMap}
             historyMap={historyMap}
             alerts={alertHistory}
+            beginnerMode={beginnerMode}
             onRequestExplain={async (query) => {
               setAlertAnalysisLoading('overview');
               try {
@@ -2335,6 +2397,7 @@ export default function App() {
           <StrategyLab 
             paperHistory={paperHistory}
             paperPositions={paperPositions}
+            beginnerMode={beginnerMode}
           />
         </main>
       )}
@@ -2358,19 +2421,20 @@ export default function App() {
             wsRef={wsRef}
             setReplayHistory={setReplayHistory}
             setReplayMetrics={setReplayMetrics}
+            beginnerMode={beginnerMode}
           />
         </main>
       )}
 
       {activeTab === "latency" && (
         <main className="flex-1 p-6 space-y-6 max-w-[1600px] mx-auto w-full">
-          <LatencyLab />
+          <LatencyLab beginnerMode={beginnerMode} />
         </main>
       )}
 
       {activeTab === "orderbook" && (
         <main className="flex-1 p-6 space-y-6 max-w-[1600px] mx-auto w-full">
-          <BidAskLiquidity metricsMap={metricsMap} stocks={stocks} cryptos={cryptos} />
+          <BidAskLiquidity metricsMap={metricsMap} stocks={stocks} cryptos={cryptos} beginnerMode={beginnerMode} />
         </main>
       )}
 

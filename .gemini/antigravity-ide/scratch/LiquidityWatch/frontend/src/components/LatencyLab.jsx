@@ -9,7 +9,7 @@ import {
 
 const WEBSOCKET_URL = "ws://localhost:9001/metrics";
 
-export default function LatencyLab() {
+export default function LatencyLab({ beginnerMode }) {
   const [connected, setConnected] = useState(false);
   const [metrics, setMetrics] = useState(null);
   const [history, setHistory] = useState([]);
@@ -156,6 +156,19 @@ export default function LatencyLab() {
             transition={{ duration: 0.4 }}
             className="space-y-6"
           >
+            {beginnerMode && (
+              <div className="bg-blue-950/20 border border-blue-900/30 p-4 rounded-sm text-xs text-slate-350 space-y-2 text-left">
+                <h4 className="font-bold text-blue-400 flex items-center space-x-1.5">
+                  <span>💡 Beginner Guide: Matching Engine Latency Lab</span>
+                </h4>
+                <p className="leading-relaxed">
+                  This panel monitors the speed of our C++ matching engine simulator. 
+                  <strong>Latency</strong> measures how long it takes to process a trade (lower is better), 
+                  while <strong>Throughput</strong> measures how many trades the engine can process per second (higher is better). 
+                  In high-frequency trading (HFT), sub-millisecond execution is crucial to secure the best prices!
+                </p>
+              </div>
+            )}
             {/* Grid of Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               

@@ -284,6 +284,59 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Persistent Trades endpoints
+  if (req.method === 'GET' && req.url === '/api/trades') {
+    const filePath = path.resolve(__dirname, 'trades.json');
+    let trades = [];
+    if (fs.existsSync(filePath)) {
+      try {
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        trades = JSON.parse(fileContent);
+      } catch (e) {
+        console.error('Failed to parse trades file', e);
+      }
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ trades }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/trades') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const newTrade = JSON.parse(body);
+        const filePath = path.resolve(__dirname, 'trades.json');
+        let trades = [];
+        if (fs.existsSync(filePath)) {
+          try {
+            const fileContent = fs.readFileSync(filePath, 'utf8');
+            trades = JSON.parse(fileContent);
+          } catch (e) {
+            console.error('Failed to parse trades file', e);
+          }
+        }
+        trades.push(newTrade);
+        fs.writeFileSync(filePath, JSON.stringify(trades, null, 2), 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, trade: newTrade }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'DELETE' && req.url === '/api/trades') {
+    const filePath = path.resolve(__dirname, 'trades.json');
+    fs.writeFileSync(filePath, JSON.stringify([], null, 2), 'utf8');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true }));
+    return;
+  }
+
   res.writeHead(404);
   res.end();
 });

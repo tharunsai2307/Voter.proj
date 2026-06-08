@@ -12,7 +12,8 @@ export default function ReplayStudio({
   setReplayDate,
   wsRef,
   setReplayHistory,
-  setReplayMetrics
+  setReplayMetrics,
+  beginnerMode
 }) {
   const prices = replayHistory.map(h => h.price).filter(p => p !== null && !isNaN(p));
   const spreads = replayHistory.map(h => h.spread).filter(s => s !== null && !isNaN(s));
@@ -141,6 +142,18 @@ export default function ReplayStudio({
         </h2>
         <p className="text-slate-500 text-xs mt-1">Replay historical data sequentially through the institutional analyzer pipeline.</p>
       </div>
+
+      {beginnerMode && (
+        <div className="bg-blue-950/20 border border-blue-900/30 p-4 rounded-sm text-xs text-slate-350 space-y-2 text-left">
+          <h4 className="font-bold text-blue-400 flex items-center space-x-1.5">
+            <span>💡 Beginner Guide: Market Replay Studio</span>
+          </h4>
+          <p className="leading-relaxed">
+            Market Replay lets you pick a target date and asset (e.g. <strong>AAPL</strong>) and play historical order events step-by-step. 
+            You can speed up execution up to 100x or pause/seek manually. This helps you study past flash crashes, volatility regimes, or liquidity gaps in historical context.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Controls Panel */}
