@@ -15,6 +15,14 @@
 !/.gemini/antigravity-ide/scratch/LiquidityWatch/
 !/.gemini/antigravity-ide/scratch/LiquidityWatch/**
 
+!/OneDrive/
+!/OneDrive/Pictures/
+!/OneDrive/Pictures/caresync-ai/
+!/OneDrive/Pictures/caresync-ai/**
+
+!/OneDrive/Pictures/caresync-ai-backend/
+!/OneDrive/Pictures/caresync-ai-backend/**
+
 # Ignore build artifacts, package managers, and environments inside allowed folders
 **/node_modules/
 **/build/

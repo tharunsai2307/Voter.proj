@@ -1,0 +1,20 @@
+[
+  {
+    "asset": "X:BTCUSD",
+    "qty": 1,
+    "side": "BUY",
+    "price": 62740.33,
+    "time": "2:51:43 PM",
+    "type": "BUY",
+    "note": "Market"
+  },
+  {
+    "asset": "X:BTCUSD",
+    "qty": 1,
+    "side": "SELL",
+    "price": 62768.62,
+    "time": "3:00:50 PM",
+    "type": "SELL",
+    "note": "Market"
+  }
+]
